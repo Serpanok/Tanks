@@ -10,4 +10,19 @@ public class TanksObject  {
 	//положение на карте
 	public int x;
 	public int y;
+	
+	/* Тип компонента
+	 * 
+	 * 0 - земля
+	 * 1 - трава
+	 * 2 - вода
+	 * 3 - стена
+	 * 4 - база
+	 * 5 - спавн ботов
+	 * 6 - танк */
+	public int componentType = 0;
+	
+	TanksObject()
+	{	
+	}
 }
