@@ -11,6 +11,11 @@ public class TanksObject  {
 	public int x;
 	public int y;
 	
+	public boolean isActive = true;
+	
+	//ссылка на объект ядра игры
+	public TanksGame TanksGame;
+	
 	/* Тип компонента
 	 * 
 	 * 0 - земля
@@ -21,6 +26,12 @@ public class TanksObject  {
 	 * 5 - спавн ботов
 	 * 6 - танк */
 	public int componentType = 0;
+	
+	public boolean hit( TanksObject tank_ )
+	{
+		System.out.println("HIT!!!!!!!!");
+		return true;
+	}
 	
 	TanksObject()
 	{	

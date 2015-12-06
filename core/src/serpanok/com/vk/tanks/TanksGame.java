@@ -1,6 +1,9 @@
 package serpanok.com.vk.tanks;
 
 import java.util.List;
+
+//import org.lwjgl.input.Keyboard;
+
 import java.util.ArrayList;
 
 //графика
@@ -20,15 +23,25 @@ import java.nio.file.Paths;
 public class TanksGame extends ApplicationAdapter {
 	public SpriteBatch batch;
 	public Texture texture;
-	public final int SIZE=30;
 	
-	public TanksObject map[][] = new TanksObject[11][11];
-	public List<TanksTank> tanks = new ArrayList<TanksTank>();
+	public boolean isGameActive = true;
 	
-	public TextureRegion T_extures[];
-	public TextureRegion T_tanks[][][];
-	public TextureRegion T_base;
+	public final int BLOCK_SIZE	= 30;
+	public final int AREA_SIZE	= 15;
+	public final int SHELL_SPEED= 20;
+	
+	public TanksObject 		map[][]	= new TanksObject[AREA_SIZE][AREA_SIZE];
+	public List<TanksTank>	tanks	= new ArrayList<TanksTank>();
+	public List<TanksShell> shells	= new ArrayList<TanksShell>();
+	
+	public TextureRegion T_textures[];	//текстуры
+	public TextureRegion T_tanks[][][];	//танки
+	public TextureRegion T_base;		//база игрока
 	public TextureRegion T_explosion;
+	public TextureRegion T_shells[];	//выстрелы
+	public TextureRegion T_gameOver;	//Конец игры
+	
+	public int frameI=0;
 	
 	@Override
 	public void create () {
@@ -38,15 +51,21 @@ public class TanksGame extends ApplicationAdapter {
         texture.setFilter(TextureFilter.Nearest, TextureFilter.Nearest);
         
         //создание текстур
-        T_extures = new TextureRegion[6];
-        T_extures[0] = new TextureRegion(texture, 0, 0, SIZE, SIZE);
-        T_extures[1] = new TextureRegion(texture, SIZE, 0, SIZE, SIZE);
-        T_extures[2] = new TextureRegion(texture, SIZE*2, 0, SIZE, SIZE);
-        T_extures[3] = new TextureRegion(texture, SIZE*3, 0, SIZE, SIZE);
-        T_extures[4] = new TextureRegion(texture, 0, SIZE, SIZE, SIZE);
-        T_extures[5] = new TextureRegion(texture, SIZE, SIZE, SIZE, SIZE);
-        T_base = new TextureRegion(texture, SIZE*8, 0, SIZE*2, SIZE*2);
-        T_explosion = new TextureRegion(texture, SIZE*4, 0, SIZE*2, SIZE*2);
+        T_textures	 	= new TextureRegion[6];
+        T_textures[0]	= new TextureRegion(texture, 0, 0, BLOCK_SIZE, BLOCK_SIZE);
+        T_textures[1]	= new TextureRegion(texture, BLOCK_SIZE, 0, BLOCK_SIZE, BLOCK_SIZE);
+        T_textures[2]	= new TextureRegion(texture, BLOCK_SIZE*2, 0, BLOCK_SIZE, BLOCK_SIZE);
+        T_textures[3]	= new TextureRegion(texture, BLOCK_SIZE*3, 0, BLOCK_SIZE, BLOCK_SIZE);
+        T_textures[4]	= new TextureRegion(texture, 0, BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+        T_textures[5]	= new TextureRegion(texture, BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+        T_base			= new TextureRegion(texture, BLOCK_SIZE*8, 0, BLOCK_SIZE*2, BLOCK_SIZE*2);
+        T_explosion		= new TextureRegion(texture, BLOCK_SIZE*4, 0, BLOCK_SIZE*2, BLOCK_SIZE*2);
+        T_shells		= new TextureRegion[4];
+        T_shells[0]		= new TextureRegion(texture, 186, 6,  16, 16);
+        T_shells[1]		= new TextureRegion(texture, 218, 38, 16, 16);
+        T_shells[2]		= new TextureRegion(texture, 186, 38, 16, 16);
+        T_shells[3]		= new TextureRegion(texture, 218, 6,  16, 16);
+        T_gameOver		= new TextureRegion(texture, 0, 300,  480, 240);
         
         //заполнение текстур танков
         T_tanks = new TextureRegion[2][4][4];
@@ -56,17 +75,17 @@ public class TanksGame extends ApplicationAdapter {
             {
 	        	for(int direction=0; direction<4; direction++)
 	            {
-	        		int x = (type * SIZE * 8) + (direction * SIZE * 2);
-	        		int y = (SIZE * 2) + (level * SIZE * 2);
+	        		int x = (type * BLOCK_SIZE * 8) + (direction * BLOCK_SIZE * 2);
+	        		int y = (BLOCK_SIZE * 2) + (level * BLOCK_SIZE * 2);
 	        		
-	        		T_tanks[type][level][direction] = new TextureRegion(texture, x, y, SIZE*2, SIZE*2);
+	        		T_tanks[type][level][direction] = new TextureRegion(texture, x, y, BLOCK_SIZE*2, BLOCK_SIZE*2);
 	            }
             }
         }
         
         //чтение карты
         List<String> file;
-        String mapFileName = "bin/map1.txt";
+        String mapFileName = "bin/map_1.txt";
         try
         {
         	file = Files.readAllLines(Paths.get(mapFileName));
@@ -74,7 +93,7 @@ public class TanksGame extends ApplicationAdapter {
             //инициализация карты
             int y = 0;
             for (String line : file) {
-        		for(int x=0; x<11; x++)
+        		for(int x=0; x < AREA_SIZE; x++)
         		{
         			char element		= line.charAt(x);
         			int componentType	= 0;
@@ -109,12 +128,12 @@ public class TanksGame extends ApplicationAdapter {
             		else if( element == 'T' )
             		{
         				System.out.println("TanksTank");
-            			System.out.println("tank/x=" + (x * SIZE * 2) + "/y=" +  ( y* SIZE * 2));
+            			System.out.println("tank/x=" + x + "/y=" +  y);
         				System.out.println();
         				
         				map[y][x] = new TanksObject();
         				
-            			tanks.add( new TanksTank( 0, 0, false, 0, x * SIZE * 2, y * SIZE * 2 ) );
+            			tanks.add( new TanksTank( 0, 0, false, 0, x, y, this) );
             			
             			continue;
             		}
@@ -126,7 +145,7 @@ public class TanksGame extends ApplicationAdapter {
         			if( textureType != -1 )
         			{
         				System.out.println("TanksTexture");
-        				map[y][x] = new TanksTexture( textureType );
+        				map[y][x] = new TanksTexture( textureType, this );
         			}
 
         			System.out.println(element + " - " + componentType + "/x=" + x + "/y=" + y);
@@ -148,44 +167,107 @@ public class TanksGame extends ApplicationAdapter {
 
 	@Override
 	public void render () {
+		frameI++;
+		
+		if(isGameActive)
+		{
+
+			//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			if(frameI%30==0)
+			{
+				int direction = 0;
+				if(frameI == 630)
+				{
+					tanks.get(0).shot();
+					direction = 2;
+				}
+				else if(frameI == 450)
+				{
+					direction = 2;
+				}
+				else if(frameI == 420)
+				{
+					tanks.get(0).shot();
+					direction = 2;
+				}
+				else if(frameI >= 360)
+				{
+					direction = 1;
+				}
+				else if(frameI >= 90)
+				{
+					direction = 3;
+				}
+				
+				tanks.get(0).move(direction);
+			}
+			//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			
+			//полёт пули
+			if(frameI%SHELL_SPEED == 0)
+			{
+				for(int i=0; i < shells.size(); i++)
+				{
+					if( shells.get(i).isActive )
+					{
+						shells.get(i).move();
+					}
+				}
+			}
+		}
+		
+		//очистка экрана
+		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		//System.out.println(i);
-		Gdx.gl.glClearColor(1, 0, 0, 1);
+		//Gdx.gl.glClearColor(1, 0, 0, 1);
 		
 		batch.begin();
+		
+		//Keyboard.isKeyDown(Keyboard.KEY_LEFT)
+        
+		/*try {
+			Thread.sleep(1);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}*/
+		//System.out.println(i1);
 		
 		//отрисовка танков
 		for(int i=0; i < tanks.size(); i++)
 		{
 			TanksTank tempTank = tanks.get(i);
 			
-			System.out.println("tankBuild" + "[" + tempTank.type + "]" + "[" + tempTank.level + "]" + "[" + tempTank.direction + "]" + "/x=" + tempTank.x + "/y=" + tempTank.y);
-			
-			batch.draw(T_tanks[ tempTank.type ][ tempTank.level ][ tempTank.direction ], tempTank.x, tempTank.y);
+			if(tempTank.isActive)
+			{
+				//System.out.println("tankBuild" + "[" + tempTank.type + "]" + "[" + tempTank.level + "]" + "[" + tempTank.direction + "]" + "/x=" + tempTank.x + "/y=" + tempTank.y);
+				batch.draw(T_tanks[ tempTank.type ][ tempTank.level ][ tempTank.direction ], tempTank.x*BLOCK_SIZE*2, tempTank.y*BLOCK_SIZE*2);
+			}
 		}
 		
 		//отрисовка карты
-    	for (int y=0; y<11; y++) {
-    		for(int x=0; x<11; x++)
+    	for (int y=0; y < AREA_SIZE; y++) {
+    		for(int x=0; x < AREA_SIZE; x++)
     		{
-    			System.out.println("build/x=" + x + "/y=" + y);
+    			//System.out.println("build/x=" + x + "/y=" + y);
     			TextureRegion smallElenemt = null;
         		TextureRegion bigElenemt = null;
         		
         		//трава
         		if( map[y][x].componentType == 1 )
         		{
-        			smallElenemt = T_extures[ 2 ];
+        			smallElenemt = T_textures[ 2 ];
         		}
         		//вода
         		if( map[y][x].componentType == 2 )
         		{
-        			smallElenemt = T_extures[ 4 ];
+        			smallElenemt = T_textures[ 4 ];
         		}
         		//стена
         		else if( map[y][x].componentType == 3 )
         		{
         			TanksTexture tempWall = (TanksTexture) map[y][x];
-        			smallElenemt = T_extures[ tempWall.type ];
+        			smallElenemt = T_textures[ tempWall.type ];
         		}
         		//база
         		else if( map[y][x].componentType == 4 )
@@ -200,17 +282,32 @@ public class TanksGame extends ApplicationAdapter {
         		
         		if(smallElenemt != null)
         		{
-        			batch.draw(smallElenemt, x*SIZE*2,		y*SIZE*2);
-        			batch.draw(smallElenemt, x*SIZE*2+SIZE,	y*SIZE*2);
-        			batch.draw(smallElenemt, x*SIZE*2,		y*SIZE*2+SIZE);
-        			batch.draw(smallElenemt, x*SIZE*2+SIZE,	y*SIZE*2+SIZE);
+        			batch.draw(smallElenemt, x*BLOCK_SIZE*2,			y*BLOCK_SIZE*2);
+        			batch.draw(smallElenemt, x*BLOCK_SIZE*2+BLOCK_SIZE,	y*BLOCK_SIZE*2);
+        			batch.draw(smallElenemt, x*BLOCK_SIZE*2,			y*BLOCK_SIZE*2+BLOCK_SIZE);
+        			batch.draw(smallElenemt, x*BLOCK_SIZE*2+BLOCK_SIZE,	y*BLOCK_SIZE*2+BLOCK_SIZE);
         		}
         		else if(bigElenemt != null)
         		{
-        			batch.draw(bigElenemt, x*SIZE*2, y*SIZE*2);
+        			batch.draw(bigElenemt, x*BLOCK_SIZE*2, y*BLOCK_SIZE*2);
         		}
     		}
         }
+    	
+		//отрисовка снарядов
+		for(int i=0; i < shells.size(); i++)
+		{
+			TanksShell tempShell = shells.get(i);
+			if( tempShell.isActive )
+			{
+				batch.draw(T_shells[ tempShell.direction ], tempShell.x*BLOCK_SIZE*2 + 22, tempShell.y*BLOCK_SIZE*2 + 22);
+			}
+		}
+		
+		if(!isGameActive)
+		{
+			batch.draw(T_gameOver, AREA_SIZE * BLOCK_SIZE - 240, AREA_SIZE * BLOCK_SIZE - 150);
+		}
 		
 		batch.end();
 		

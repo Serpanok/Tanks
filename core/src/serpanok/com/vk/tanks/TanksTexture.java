@@ -17,13 +17,34 @@ public class TanksTexture extends TanksObject {
 	public int type;			//тип
 	public int strength	= -1;	//остаточная прочность
 	
-	TanksTexture( int type_ )
+	public boolean hit( TanksObject tank_ )
+	{
+		System.out.println("HIT TEXTURE!!!!!!!!" + x + "/" + y);
+		
+		//если это кирпич - уменьшаем прочность
+		if( type == 0 )
+		{
+			strength--;
+			
+			//если прочность упала до 0 то превращаем объект в землю
+			if(strength <= 0)
+			{
+				TanksGame.map[y][x].componentType = 0;
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
+	TanksTexture( int type_, TanksGame TanksGame_ )
 	{
 		this.type = type_;
+		this.TanksGame = TanksGame_;
 		
 		if(type_ == 0)
 		{
-			this.strength = 3;
+			this.strength = 2;
 		}
 	}
 }
