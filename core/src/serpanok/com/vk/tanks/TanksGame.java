@@ -198,17 +198,11 @@ public class TanksGame extends ApplicationAdapter {
 		
 		if(isGameActive)
 		{
-			//рандомные события
-			//System.out.println(rand.nextFloat());
-			//System.out.println(rand.nextInt(100));
-			
-			
 			//выдача бонусов
 			if( this.frameI % this.BONUS_RANGE == 0 )
 			{
 				this.bonuses.add( new TanksBonus( this ) );
 			}
-			
 			
 			//отлов нажатия клавиш
 			int moveDirection = -1;
@@ -236,37 +230,6 @@ public class TanksGame extends ApplicationAdapter {
 			{
 				tanks.get(0).shot();
 			}
-
-			//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			/*if(frameI%30==0)
-			{
-				int direction = 0;
-				if(frameI == 630)
-				{
-					tanks.get(0).shot();
-					direction = 2;
-				}
-				else if(frameI == 450)
-				{
-					direction = 2;
-				}
-				else if(frameI == 420)
-				{
-					tanks.get(0).shot();
-					direction = 2;
-				}
-				else if(frameI >= 360)
-				{
-					direction = 1;
-				}
-				else if(frameI >= 90)
-				{
-					direction = 3;
-				}
-				
-				tanks.get(0).move(direction);
-			}*/
-			//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			
 			//полёт пули
 			if(frameI%SHELL_SPEED == 0)
@@ -283,20 +246,8 @@ public class TanksGame extends ApplicationAdapter {
 		
 		//очистка экрана
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-		//System.out.println(i);
-		//Gdx.gl.glClearColor(1, 0, 0, 1);
 		
 		batch.begin();
-		
-		//Keyboard.isKeyDown(Keyboard.KEY_LEFT)
-        
-		/*try {
-			Thread.sleep(1);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
-		//System.out.println(i1);
 		
 		//отрисовка танков
 		for(int i=0; i < this.tanks.size(); i++)
@@ -331,10 +282,9 @@ public class TanksGame extends ApplicationAdapter {
     	for (int y=0; y < AREA_SIZE; y++) {
     		for(int x=0; x < AREA_SIZE; x++)
     		{
-    			//System.out.println("build/x=" + x + "/y=" + y);
     			TextureRegion smallElenemt	= null;
         		TextureRegion bigElenemt	= null;
-        		TextureRegion ruin		= null;
+        		TextureRegion ruin			= null;
         		
         		//трава
         		if( map[y][x].componentType == 1 )
@@ -365,6 +315,7 @@ public class TanksGame extends ApplicationAdapter {
         		{
         			bigElenemt = T_base;
         		}
+        		//танк
         		else if( map[y][x].componentType == 6 )
         		{
         			TanksTank tempTank = (TanksTank) map[y][x];
@@ -415,6 +366,7 @@ public class TanksGame extends ApplicationAdapter {
 			}
 		}
 		
+		//если игра законченна
 		if(!isGameActive)
 		{
 			batch.draw(T_gameOver, AREA_SIZE * BLOCK_SIZE - 240, AREA_SIZE * BLOCK_SIZE - 150);
