@@ -19,11 +19,16 @@ public class TanksBase extends TanksObject {
 		//если прочность упала до 0 то превращаем объект в землю
 		if(strength <= 0)
 		{
-			System.out.println("HIT BASE!!!!!!!!" + x + "/" + y);
+			this.TanksGame.isGameActive = false;
 			return true;
 		}
 		
 		return false;
+	}
+	
+	TanksBase( TanksGame TanksGame_ )
+	{
+		this.TanksGame = TanksGame_;
 	}
 	
 }

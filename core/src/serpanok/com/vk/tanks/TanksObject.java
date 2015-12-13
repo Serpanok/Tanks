@@ -11,6 +11,8 @@ public class TanksObject  {
 	public int x;
 	public int y;
 	
+	public int createTime;
+	
 	public boolean isActive = true;
 	
 	//ссылка на объект ядра игры
@@ -24,7 +26,8 @@ public class TanksObject  {
 	 * 3 - стена
 	 * 4 - база
 	 * 5 - спавн ботов
-	 * 6 - танк */
+	 * 6 - танк
+	 * 7 - взрыв */
 	public int componentType = 0;
 	
 	public boolean hit( TanksObject tank_ )
@@ -33,7 +36,15 @@ public class TanksObject  {
 		return true;
 	}
 	
-	TanksObject()
+	TanksObject( int x_, int y_, TanksGame TanksGame_ )
 	{	
+		this.x = x_;
+		this.y = y_;
+		this.TanksGame = TanksGame_;
+		this.createTime = TanksGame_.frameI;
+	}
+	
+	TanksObject()
+	{
 	}
 }

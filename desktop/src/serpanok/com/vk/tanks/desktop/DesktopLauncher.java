@@ -1,8 +1,5 @@
 package serpanok.com.vk.tanks.desktop;
 
-/*import org.lwjgl.input.Keyboard;
-Keyboard.isKeyDown(Keyboard.KEY_LEFT);*/
-
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
 import serpanok.com.vk.tanks.TanksGame;
@@ -13,7 +10,7 @@ public class DesktopLauncher {
 		config.title = "Tanks";
         config.resizable = false;
         
-        TanksGame TanksGame = new TanksGame();
+        TanksGame TanksGame = new TanksGame( new DesktopKeyChecker() );
         
         config.width = TanksGame.AREA_SIZE * TanksGame.BLOCK_SIZE * 2;
         config.height = TanksGame.AREA_SIZE * TanksGame.BLOCK_SIZE * 2;

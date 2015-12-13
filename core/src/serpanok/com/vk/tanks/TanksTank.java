@@ -16,8 +16,18 @@ public class TanksTank extends TanksObject {
 	public int team;				//команда
 	public int strength;			//остаточная прочность
 	
+	public int lastMove = 0;
+	public int lastShot = 0;
+	
 	public boolean move( int moveDirection )
 	{
+		//проверка на возможность движения
+		if( this.TanksGame.frameI < this.lastMove + this.TanksGame.TANK_SPEED )
+		{
+			return false;
+		}
+		lastMove = this.TanksGame.frameI;
+		
 		//если поворот танка
 		if( moveDirection != this.direction )
 		{
@@ -49,7 +59,7 @@ public class TanksTank extends TanksObject {
 				newX--;
 			}
 			
-			System.out.println("tank move to x=" + newX + "/y=" +  newY);
+			System.out.println("tank move(" + this.direction + ") to x=" + newX + "/y=" +  newY);
 			//проверка на наличие текстуры на пути
 			if( this.TanksGame.map[newY][newX].componentType > 1 )
 			{
@@ -73,10 +83,19 @@ public class TanksTank extends TanksObject {
 	}
 	
 	
-	public void shot()
+	public boolean shot()
 	{
+		//проверка на возможность движения
+		if( this.TanksGame.frameI < this.lastShot + this.TanksGame.SHOT_SPEED )
+		{
+			return false;
+		}
+		lastShot = this.TanksGame.frameI;
+		
 		System.out.println("SHOT!!!!!!!!");
 		TanksGame.shells.add( new TanksShell( this ) );
+		
+		return true;
 	}
 	
 	public boolean hit( TanksObject tank_ )
@@ -89,9 +108,12 @@ public class TanksTank extends TanksObject {
 		{
 			System.out.println("TANK destroy!!!!!!!!" + this.strength);
 			this.isActive = false;
+			
+			this.TanksGame.bangs.add( new TanksObject( this.x, this.y, this.TanksGame ) );
+			
 			if(!isBot)
 			{
-				this.TanksGame.isGameActive = false;
+				//this.TanksGame.isGameActive = false;
 			}
 			return true;
 		}
