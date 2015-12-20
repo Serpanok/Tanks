@@ -20,30 +20,37 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-//рандомайзер
-import java.util.Random;
-
 public class TanksGame extends ApplicationAdapter {
 	public SpriteBatch batch;
 	public Texture texture;
 	
 	public boolean isGameActive = true;
 	
+	
 	public final int BLOCK_SIZE	= 30;
 	public final int AREA_SIZE	= 15;
-	public final int SHELL_SPEED= 10;
-	public final int TANK_SPEED	= 15;
-	public final int SHOT_SPEED	= 60;
-	public final int BANG_SPEED	= 15;
+	
+	public final int SHELL_SPEED	= 5;
+	public final int TANK_SPEED[]	= { 25, 20, 15, 10};
+	public final int SHOT_SPEED[]	= { 60, 45, 30, 15 };
+	public final int BANG_SPEED		= 15;
 	
 	public final int BONUS_RANGE= 2000;
 	public final int BONUS_LIVE	= 800;
 	
-	Random rand = new Random();
+	public final int SPAWN_FREQUENCY		= 500;
+	public final double SPAWN_COEFFICIENT	= 0.3;
+	
+	public final double BOT_CHANGE_DIRECTION		= 0.3;	//вероятность смены направления своего движения
+	public final double BOT_SHOT_COEFFICIENT		= 0.2;	//вероятность выстрела
+	public final double BOT_SHOT_PLAYER_COEFFICIENT = 0.6;	//вероятность выстрела при видимости противника
+	
 	
 	public TanksKeyChecker keyChecker;
+	public TanksRandomizer randomizer = new TanksRandomizer();
 	
 	public TanksObject 		map[][]	= new TanksObject[AREA_SIZE][AREA_SIZE];
+	public List<TanksSpawn>	spawns	= new ArrayList<TanksSpawn>();
 	public List<TanksTank>	tanks	= new ArrayList<TanksTank>();
 	public List<TanksShell> shells	= new ArrayList<TanksShell>();
 	public List<TanksObject>bangs	= new ArrayList<TanksObject>();
@@ -60,6 +67,7 @@ public class TanksGame extends ApplicationAdapter {
 	public TextureRegion T_gameOver;	//Конец игры
 	
 	public int frameI=0;
+	public int botsLeft;	//количество оставшихся ботов
 	
 	@Override
 	public void create () {
@@ -79,8 +87,8 @@ public class TanksGame extends ApplicationAdapter {
         T_texturesRuins	 	= new TextureRegion[2];
         T_texturesRuins[0]	= new TextureRegion(texture, 360, 540,  BLOCK_SIZE*2, BLOCK_SIZE*2);
         T_texturesRuins[1]	= new TextureRegion(texture, 420, 540,  BLOCK_SIZE*2, BLOCK_SIZE*2);
-        T_bonuses	 		= new TextureRegion[6];
-        for(int i=0;i<6;i++)
+        T_bonuses	 		= new TextureRegion[2];
+        for(int i=0;i<2;i++)
         {
         	T_bonuses[i]	= new TextureRegion(texture, (BLOCK_SIZE*2)*i, 540,  BLOCK_SIZE*2, BLOCK_SIZE*2);
         }
@@ -164,6 +172,18 @@ public class TanksGame extends ApplicationAdapter {
             			
             			continue;
             		}
+            		else if( element == 'S' )
+            		{
+        				System.out.println("TanksSpawn");
+            			System.out.println("spawn/x=" + x + "/y=" +  y);
+        				System.out.println();
+        				
+        				map[y][x] = new TanksObject();
+        				
+        				spawns.add( new TanksSpawn( x, y, this ) );
+            			
+            			continue;
+            		}
             		else
             		{
             			map[y][x] = new TanksObject();
@@ -204,6 +224,16 @@ public class TanksGame extends ApplicationAdapter {
 				this.bonuses.add( new TanksBonus( this ) );
 			}
 			
+			//работа спавнов
+			if( this.frameI % this.SPAWN_FREQUENCY == 0 || this.frameI == 50 )
+			{
+				System.out.println("SpawnTime");
+				for(int i = 0; i < this.spawns.size(); i++)
+				{
+					this.spawns.get(i).create( this.frameI == 50 );
+				}
+			}
+			
 			//отлов нажатия клавиш
 			int moveDirection = -1;
 			if( this.keyChecker.isTop() )
@@ -229,6 +259,130 @@ public class TanksGame extends ApplicationAdapter {
 			if( this.keyChecker.isSpace() )
 			{
 				tanks.get(0).shot();
+			}
+			
+			//супер-пупер умный интелект ботов для движения
+			if( this.frameI % 5 == 0 && this.frameI > 50 )
+			{
+				for(int i = 0; i < this.tanks.size(); i++)
+				{
+					TanksTank tempTank = this.tanks.get(i);
+					
+					if( tempTank.isActive && tempTank.isBot && tempTank.isCanMove() )
+					{
+						int directions[] = { 0,0,0,0 };
+						int directionsCount = 0;
+						boolean isCanMoveToCurrentDirection = false;
+						
+						//возможность движения вверх
+						if( this.map[ tempTank.y + 1 ][ tempTank.x ].componentType <= 1 )
+						{
+							directions[directionsCount++] = 0;
+							
+							if( tempTank.direction == 0 )
+							{
+								isCanMoveToCurrentDirection = true;
+							}
+						}
+						//возможность движения вправо
+						if( this.map[ tempTank.y ][ tempTank.x + 1 ].componentType <= 1 )
+						{
+							directions[directionsCount++] = 1;
+							
+							if( tempTank.direction == 1 )
+							{
+								isCanMoveToCurrentDirection = true;
+							}
+						}
+						//возможность движения вниз
+						if( this.map[ tempTank.y - 1 ][ tempTank.x ].componentType <= 1 )
+						{
+							directions[directionsCount++] = 2;
+							
+							if( tempTank.direction == 2 )
+							{
+								isCanMoveToCurrentDirection = true;
+							}
+						}
+						//возможность движения влево
+						if( this.map[ tempTank.y ][ tempTank.x - 1 ].componentType <= 1 )
+						{
+							directions[directionsCount++] = 3;
+							
+							if( tempTank.direction == 3 )
+							{
+								isCanMoveToCurrentDirection = true;
+							}
+						}
+						
+						//System.out.println("Tank at " + tempTank.x + "/" + tempTank.y + " can move to " + directionsCount + " directions");
+						
+						int moveTo = directions[this.randomizer.rand.nextInt( directionsCount ) ];
+						
+						if( isCanMoveToCurrentDirection && !this.randomizer.isEvent( this.BOT_CHANGE_DIRECTION ) )
+						{
+							moveTo = tempTank.direction;
+						}
+						
+						//System.out.println("Tank move to " + moveTo );
+						
+						tempTank.move(moveTo);
+					}
+				}
+			}
+			
+			//супер-пупер умный интелект ботов для выстрелов
+			if( this.frameI % 15 == 0 )
+			{
+				TanksTank playerTank = this.tanks.get(0);
+				
+				System.out.println("BOT shot time");
+				for(int i = 0; i < this.tanks.size(); i++)
+				{
+					TanksTank tempTank = this.tanks.get(i);
+					
+					if( tempTank.isActive && tempTank.isBot )
+					{
+						boolean isSeePlayer = false;
+						
+						//определение наличая игрока на одной оси по горизонтали
+						if( playerTank.y == tempTank.y )
+						{
+							if(	( tempTank.direction == 1 && playerTank.x < tempTank.x )
+								||
+								( tempTank.direction == 3 && playerTank.x > tempTank.x )
+							)
+							{
+								isSeePlayer = true;
+							}
+						}
+						//определение наличая игрока на одной оси по вертекали
+						else if( playerTank.x == tempTank.x )
+						{
+							if(	( tempTank.direction == 0 && playerTank.y > tempTank.y )
+								||
+								( tempTank.direction == 2 && playerTank.y < tempTank.y )
+							)
+							{
+								isSeePlayer = true;
+							}
+						}
+						
+						if( isSeePlayer )
+						{
+							System.out.println("SEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE PLAYER!!!!!!!!!!!!!" );
+						}
+						
+						//шанс выстрела и выстрел
+						if(	(!isSeePlayer && this.randomizer.isEvent( this.BOT_SHOT_COEFFICIENT))
+							||
+							(isSeePlayer && this.randomizer.isEvent( this.BOT_SHOT_PLAYER_COEFFICIENT))
+						)
+						{
+							tempTank.shot();
+						}
+					}
+				}
 			}
 			
 			//полёт пули
@@ -379,5 +533,7 @@ public class TanksGame extends ApplicationAdapter {
 	public TanksGame( TanksKeyChecker keyChecker_ )
 	{
 		keyChecker = keyChecker_;
+
+		botsLeft = 20;
 	}
 }

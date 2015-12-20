@@ -4,8 +4,9 @@ public class TanksTank extends TanksObject {
 	
 	public int type;				//тип
 	public int level;
+	public int life;				//остаточные жизни
 	public boolean isBot;			//бот?
-	public TanksObject[] bonuses;	//бонусы
+	public TanksBonus bonus;		//бонус
 	public int direction;			//направление движения
 	public int team;				//команда
 	public int strength;			//остаточная прочность
@@ -13,10 +14,19 @@ public class TanksTank extends TanksObject {
 	public int lastMove = 0;
 	public int lastShot = 0;
 	
+	public boolean isCanMove()
+	{
+		if( this.TanksGame.frameI < this.lastMove + this.TanksGame.TANK_SPEED[this.level] )
+		{
+			return false;
+		}
+		return true;
+	}
+	
 	public boolean move( int moveDirection )
 	{
 		//проверка на возможность движения
-		if( this.TanksGame.frameI < this.lastMove + this.TanksGame.TANK_SPEED )
+		if( !this.isCanMove() )
 		{
 			return false;
 		}
@@ -70,6 +80,46 @@ public class TanksTank extends TanksObject {
 				}
 			}
 			
+			//проверка на наличие бонуса на пути
+			for(int i=0; i < this.TanksGame.bonuses.size(); i++)
+			{
+				TanksBonus tempBonus = this.TanksGame.bonuses.get(i);
+				
+				if(tempBonus.isActive && tempBonus.x == newX && tempBonus.y == newY)
+				{
+					tempBonus.tank = this;
+					
+					//если бонус длительный...
+					if(tempBonus.type == 0)
+					{
+						//если есть возможность повышения 
+						if(this.level < 3)
+						{
+							this.level++;
+						}
+						//если уже максимальный уровень - добавляем жизнь
+						else
+						{
+							this.life++;
+						}
+					}
+					else if(tempBonus.type == 1)
+					{
+						System.out.println("BEFORE DESTROY: " + this.TanksGame.tanks.size());
+						for(int j=1; j < this.TanksGame.tanks.size(); j++)
+						{
+							System.out.println("CHECK FOR DESTROY: " + j);
+							if( this.TanksGame.tanks.get(j).isActive && this.TanksGame.tanks.get(j).isBot )
+							{
+								System.out.println("DESTROY: " + j);
+								this.TanksGame.tanks.get(j).hit(this);
+							}
+						}
+						System.out.println("AFTER DESTROY: " + this.TanksGame.tanks.size());
+					}
+				}
+			}
+			
 			x = newX;
 			y = newY;
 		}
@@ -80,7 +130,7 @@ public class TanksTank extends TanksObject {
 	public boolean shot()
 	{
 		//проверка на возможность движения
-		if( this.TanksGame.frameI < this.lastShot + this.TanksGame.SHOT_SPEED )
+		if( this.TanksGame.frameI < this.lastShot + this.TanksGame.SHOT_SPEED[this.level] )
 		{
 			return false;
 		}
@@ -105,9 +155,9 @@ public class TanksTank extends TanksObject {
 			
 			this.TanksGame.bangs.add( new TanksObject( this.x, this.y, this.TanksGame ) );
 			
-			if(!isBot)
+			if(!this.isBot)
 			{
-				//this.TanksGame.isGameActive = false;
+				this.TanksGame.isGameActive = false;
 			}
 			return true;
 		}
